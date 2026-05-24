@@ -1,0 +1,1225 @@
+openapi: 3.0.3
+info:
+  title: Food Delivery System
+  description: |
+    Система за онлайн поръчка и доставка на храна.
+    Системата поддържа 4 роли: Admin, RestaurantOwner, DeliveryDriver, Customer.
+    Всички защитени endpoints изискват JWT Bearer токен.
+  version: 1.0.0
+tags:
+  - name: Auth
+    description: Автентикация и регистрация
+  - name: Restaurants
+    description: Управление на ресторанти
+  - name: MenuItems
+    description: Управление на менюта
+  - name: Orders
+    description: Управление на поръчки
+  - name: Users
+    description: Управление на потребители
+
+security:
+  - BearerAuth: []
+
+paths:
+
+  # ─── AUTH ─────────────────────────────────────────────────────────────────
+
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Регистрация на нов потребител
+      description: Създава нов потребител с роля Customer. Връща JWT токен при успех.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDto'
+            example:
+              username: "ivan_petrov"
+              email: "ivan@example.com"
+              password: "Secret123!"
+              address: "ул. Витоша 10, София"
+              phoneNumber: "0888123456"
+      responses:
+        '200':
+          description: Успешна регистрация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Вход в системата
+      description: Автентикира потребител по email и парола и връща JWT токен.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginDto'
+            example:
+              email: "ivan@example.com"
+              password: "Secret123!"
+      responses:
+        '200':
+          description: Успешен вход
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ─── RESTAURANTS ──────────────────────────────────────────────────────────
+
+  /api/restaurants:
+    get:
+      tags: [Restaurants]
+      summary: Списък с ресторанти
+      description: |
+        Връща страниран и сортиран списък с ресторанти.  
+         Поддържа филтриране по име и адрес. Достъпно без автентикация.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/SortBy'
+        - $ref: '#/components/parameters/SortDirection'
+        - name: search
+          in: query
+          description: Филтриране по име на ресторант
+          schema:
+            type: string
+            maxLength: 100
+        - name: search2
+          in: query
+          description: Филтриране по адрес на ресторант
+          schema:
+            type: string
+            maxLength: 200
+      responses:
+        '200':
+          description: Успешен отговор
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResultRestaurant'
+
+    post:
+      tags: [Restaurants]
+      summary: Създаване на ресторант
+      description: Само Admin може да създава ресторанти.  
+       OwnerId е задължителен за назначаване на RestaurantOwner.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRestaurantDto'
+            example:
+              name: "Pizza Palace"
+              address: "бул. Витоша 12, София"
+              phoneNumber: "0888999000"
+              description: "Най-добрата пица в града"
+              ownerId: 5
+      responses:
+        '201':
+          description: Ресторантът е създаден успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestaurantDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/restaurants/{id}:
+    get:
+      tags: [Restaurants]
+      summary: Детайли за ресторант
+      description: Връща пълна информация за конкретен ресторант по ID. Достъпно без автентикация.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Успешен отговор
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestaurantDto'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Restaurants]
+      summary: Обновяване на ресторант
+      description: Admin може да обновява всеки ресторант. RestaurantOwner може да обновява само своя ресторант.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRestaurantDto'
+      responses:
+        '204':
+          description: Успешно обновяване
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Restaurants]
+      summary: Изтриване на ресторант
+      description: Само Admin може да изтрива ресторанти. Каскадно изтрива и свързаните MenuItems.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Успешно изтриване
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/restaurants/{id}/upload-image:
+    post:
+      tags: [Restaurants]
+      summary: Качване на снимка за ресторант
+      description: |
+        Качване снимка за ресторант.  
+         Само Admin както и RestaurantOwner(за своя ресторант само).  
+        Позволени формати: JPG, PNG, WEBP. Максимален размер: 5MB.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Снимка (JPG, PNG, WEBP, max 5MB)
+      responses:
+        '200':
+          description: Снимката е качена успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  imagePath:
+                    type: string
+                    example: "/uploads/restaurants/1_abc123.jpg"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─── MENU ITEMS ───────────────────────────────────────────────────────────
+
+  /api/menuitems:
+    get:
+      tags: [MenuItems]
+      summary: Списък с артикули от менюто
+      description: |
+        Връща страниран списък с артикули.  
+         Може да се филтрира по restaurantId.
+        Поддържа филтриране по име и категория.
+        Достъпно без автентикация.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/SortBy'
+        - $ref: '#/components/parameters/SortDirection'
+        - name: restaurantId
+          in: query
+          description: Филтриране по ID на ресторант
+          schema:
+            type: integer
+        - name: search
+          in: query
+          description: Филтриране по име на артикул
+          schema:
+            type: string
+            maxLength: 100
+        - name: search2
+          in: query
+          description: Филтриране по категория
+          schema:
+            type: string
+            maxLength: 50
+      responses:
+        '200':
+          description: Успешен отговор
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResultMenuItem'
+
+    post:
+      tags: [MenuItems]
+      summary: Създаване на артикул
+      description: Могад за създават артикули Admin и RestaurantOwner (за своя ресторант). 
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMenuItemDto'
+            example:
+              name: "Маргарита"
+              description: "Домат, моцарела, босилек"
+              price: 12.90
+              category: "Пици"
+              weight: 400
+              restaurantId: 1
+      responses:
+        '201':
+          description: Артикулът е създаден успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItemDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/menuitems/{id}:
+    get:
+      tags: [MenuItems]
+      summary: Детайли за артикул
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Успешен отговор
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItemDto'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [MenuItems]
+      summary: Обновяване на артикул
+      description: Admin и RestaurantOwner (само за своя ресторант) могат да обновяват артикули.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMenuItemDto'
+      responses:
+        '204':
+          description: Успешно обновяване
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [MenuItems]
+      summary: Изтриване на артикул
+      description: Admin и RestaurantOwner (само за своя ресторант) могат да изтриват артикули.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Успешно изтриване
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/menuitems/{id}/upload-image:
+    post:
+      tags: [MenuItems]
+      summary: Качване на снимка за артикул
+      description: Позволени формати JPG, PNG, WEBP. Максимален размер 5MB.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Снимката е качена успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  imagePath:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─── ORDERS ───────────────────────────────────────────────────────────────
+
+  /api/orders:
+    get:
+      tags: [Orders]
+      summary: Списък с поръчки
+      description: |
+        Admin вижда всички поръчки.  
+         RestaurantOwner вижда само поръчките към своя ресторант.  
+        DeliveryDriver вижда поръчки със статус Confirmed и Preparing.  
+        Customer вижда само своите поръчки.  
+        Поддържа филтриране по статус и по име на ресторант.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/SortBy'
+        - $ref: '#/components/parameters/SortDirection'
+        - name: search
+          in: query
+          description: Филтриране по статус (Pending, Confirmed, Preparing, Delivered, Cancelled)
+          schema:
+            type: string
+            maxLength: 50
+        - name: search2
+          in: query
+          description: Филтриране по име на ресторант
+          schema:
+            type: string
+            maxLength: 100
+      responses:
+        '200':
+          description: Успешен отговор
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResultOrder'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Orders]
+      summary: Създаване на поръчка
+      description: |
+        Само Customer може да създава поръчки.  
+        Всички артикули трябва да са от един и същи ресторант.  
+        Backend автоматично изчислява TotalAmount от цените на артикулите.  
+        Поръчката се създава със статус Pending.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderDto'
+            example:
+              deliveryAddress: "ул. Примерна 5, София"
+              notes: "Без лук, моля"
+              restaurantId: 1
+              items:
+                - menuItemId: 1
+                  quantity: 2
+                - menuItemId: 3
+                  quantity: 1
+      responses:
+        '201':
+          description: Поръчката е създадена успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  status:
+                    type: string
+                    example: "Pending"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/orders/{id}:
+    get:
+      tags: [Orders]
+      summary: Детайли за поръчка
+      description: Customer вижда само своята поръчка. Admin и RestaurantOwner виждат всяка поръчка.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Успешен отговор
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Orders]
+      summary: Изтриване на поръчка
+      description: Само Admin може да изтрива поръчки.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Успешно изтриване
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/orders/{id}/status:
+    patch:
+      tags: [Orders]
+      summary: Смяна на статус на поръчка
+      description: |
+        Правила за смяна на статус:
+        - RestaurantOwner: Pending → Confirmed → Preparing (само за своя ресторант)
+        - DeliveryDriver: Preparing → Delivered
+        - Customer: Pending → Cancelled (само своята поръчка)
+        - Admin: всякакъв статус  
+        Не може да се смени статус на Delivered поръчка.  
+        Валидни статуси: Pending, Confirmed, Preparing, Delivered, Cancelled
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrderStatusDto'
+            example:
+              status: "Confirmed"
+      responses:
+        '204':
+          description: Статусът е сменен успешно
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─── USERS ────────────────────────────────────────────────────────────────
+
+  /api/users:
+    get:
+      tags: [Users]
+      summary: Списък с потребители
+      description: |
+        Само Admin. Поддържа филтриране по username и по роля.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/SortBy'
+        - $ref: '#/components/parameters/SortDirection'
+        - name: search
+          in: query
+          description: Филтриране по username
+          schema:
+            type: string
+            maxLength: 50
+        - name: search2
+          in: query
+          description: Филтриране по роля (Admin, RestaurantOwner, DeliveryDriver, Customer)
+          schema:
+            type: string
+            maxLength: 20
+      responses:
+        '200':
+          description: Успешен отговор
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResultUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/users/{id}:
+    get:
+      tags: [Users]
+      summary: Детайли за потребител
+      description: Само Admin.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Успешен отговор
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Users]
+      summary: Обновяване на потребител
+      description: Само Admin. Може да смени роля, активност, адрес.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserDto'
+      responses:
+        '204':
+          description: Успешно обновяване
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Users]
+      summary: Изтриване на потребител
+      description: Само Admin. Не може да изтрие себе си.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Успешно изтриване
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+# ─── COMPONENTS ─────────────────────────────────────────────────────────────
+
+components:
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT токен получен от /api/auth/login или /api/auth/register
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+    SortBy:
+      name: sortBy
+      in: query
+      schema:
+        type: string
+    SortDirection:
+      name: sortDirection
+      in: query
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: asc
+
+  schemas:
+
+    # AUTH
+    RegisterDto:
+      type: object
+      required: [username, email, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          description: Уникално потребителско име
+        email:
+          type: string
+          format: email
+          maxLength: 100
+          description: Уникален имейл адрес
+        password:
+          type: string
+          minLength: 6
+          maxLength: 100
+          description: Парола минимум 6 символа
+        address:
+          type: string
+          maxLength: 200
+          nullable: true
+        phoneNumber:
+          type: string
+          maxLength: 20
+          nullable: true
+          pattern: '^\+?[0-9]{7,20}$'
+
+    LoginDto:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+
+    AuthResponseDto:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT Bearer токен валиден 7 дни
+        username:
+          type: string
+        role:
+          type: string
+          enum: [Admin, RestaurantOwner, DeliveryDriver, Customer]
+        userId:
+          type: integer
+
+    # USER
+    UserDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+          maxLength: 50
+        email:
+          type: string
+          maxLength: 100
+        role:
+          type: string
+          enum: [Admin, RestaurantOwner, DeliveryDriver, Customer]
+        address:
+          type: string
+          maxLength: 200
+          nullable: true
+        phoneNumber:
+          type: string
+          maxLength: 20
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+
+    UpdateUserDto:
+      type: object
+      properties:
+        username:
+          type: string
+          maxLength: 50
+        address:
+          type: string
+          maxLength: 200
+        phoneNumber:
+          type: string
+          maxLength: 20
+        role:
+          type: string
+          enum: [Admin, RestaurantOwner, DeliveryDriver, Customer]
+        isActive:
+          type: boolean
+
+    # RESTAURANT
+    RestaurantDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          maxLength: 100
+        address:
+          type: string
+          maxLength: 200
+        phoneNumber:
+          type: string
+          maxLength: 20
+        description:
+          type: string
+          maxLength: 500
+          nullable: true
+        rating:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 5
+        imagePath:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        ownerId:
+          type: integer
+          nullable: true
+        ownerName:
+          type: string
+          nullable: true
+
+    CreateRestaurantDto:
+      type: object
+      required: [name, address, phoneNumber]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        address:
+          type: string
+          minLength: 5
+          maxLength: 200
+        phoneNumber:
+          type: string
+          maxLength: 20
+          pattern: '^\+?[0-9]{7,20}$'
+        description:
+          type: string
+          maxLength: 500
+          nullable: true
+        ownerId:
+          type: integer
+          nullable: true
+          description: ID на потребител с роля RestaurantOwner
+
+    UpdateRestaurantDto:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        address:
+          type: string
+          maxLength: 200
+        phoneNumber:
+          type: string
+          maxLength: 20
+        description:
+          type: string
+          maxLength: 500
+        rating:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 5
+        isActive:
+          type: boolean
+        ownerId:
+          type: integer
+          nullable: true
+
+    # MENU ITEM
+    MenuItemDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+          nullable: true
+        price:
+          type: number
+          format: decimal
+          minimum: 0.01
+        category:
+          type: string
+          maxLength: 50
+        imagePath:
+          type: string
+          nullable: true
+        isAvailable:
+          type: boolean
+        weight:
+          type: number
+          format: double
+          description: Тегло в грамове
+        restaurantId:
+          type: integer
+        restaurantName:
+          type: string
+
+    CreateMenuItemDto:
+      type: object
+      required: [name, price, category, restaurantId]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+          nullable: true
+        price:
+          type: number
+          format: decimal
+          minimum: 0.01
+          maximum: 10000
+        category:
+          type: string
+          minLength: 2
+          maxLength: 50
+        weight:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 10000
+        restaurantId:
+          type: integer
+          minimum: 1
+
+    UpdateMenuItemDto:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        price:
+          type: number
+          format: decimal
+          minimum: 0.01
+          maximum: 10000
+        category:
+          type: string
+          maxLength: 50
+        isAvailable:
+          type: boolean
+        weight:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 10000
+
+    # ORDER
+    OrderDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        status:
+          type: string
+          enum: [Pending, Confirmed, Preparing, Delivered, Cancelled]
+        deliveryAddress:
+          type: string
+          maxLength: 300
+        totalAmount:
+          type: number
+          format: decimal
+        notes:
+          type: string
+          maxLength: 500
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        userId:
+          type: integer
+        username:
+          type: string
+        restaurantId:
+          type: integer
+        restaurantName:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemDto'
+
+    OrderItemDto:
+      type: object
+      properties:
+        menuItemId:
+          type: integer
+        menuItemName:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: number
+          format: decimal
+
+    CreateOrderDto:
+      type: object
+      required: [deliveryAddress, restaurantId, items]
+      properties:
+        deliveryAddress:
+          type: string
+          minLength: 5
+          maxLength: 300
+        notes:
+          type: string
+          maxLength: 500
+          nullable: true
+        restaurantId:
+          type: integer
+          minimum: 1
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CreateOrderItemDto'
+
+    CreateOrderItemDto:
+      type: object
+      required: [menuItemId, quantity]
+      properties:
+        menuItemId:
+          type: integer
+          minimum: 1
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 100
+
+    UpdateOrderStatusDto:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [Pending, Confirmed, Preparing, Delivered, Cancelled]
+
+    # PAGED RESULTS
+    PagedResultRestaurant:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RestaurantDto'
+        totalCount:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+
+    PagedResultMenuItem:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuItemDto'
+        totalCount:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+
+    PagedResultOrder:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderDto'
+        totalCount:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+
+    PagedResultUser:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserDto'
+        totalCount:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+
+    # ERROR
+    ProblemDetails:
+      type: object
+      description: RFC 7807 Problem Details
+      properties:
+        status:
+          type: integer
+        title:
+          type: string
+        detail:
+          type: string
+        instance:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Невалидни входни данни
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            status: 400
+            title: "Bad Request"
+            detail: "Невалидни данни"
+            instance: "/api/restaurants"
+
+    Unauthorized:
+      description: Липсващ или невалиден JWT токен
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            status: 401
+            title: "Unauthorized"
+            detail: "Invalid email or password."
+            instance: "/api/auth/login"
+
+    Forbidden:
+      description: Нямате права за тази операция
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            status: 403
+            title: "Forbidden"
+            detail: "Access denied."
+            instance: "/api/restaurants"
+
+    NotFound:
+      description: Ресурсът не е намерен
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            status: 404
+            title: "Resource Not Found"
+            detail: "Restaurant with ID 5 not found."
+            instance: "/api/restaurants/5"
+
+    Conflict:
+      description: Конфликт — ресурсът вече съществува
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            status: 409
+            title: "Conflict"
+            detail: "Email is already in use."
+            instance: "/api/auth/register"
