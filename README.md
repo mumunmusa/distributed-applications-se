@@ -1,5 +1,5 @@
-#Мюмюн Муса Муса
-##Факултетен номер: 2401321002
+# Мюмюн Муса Муса
+## Факултетен номер: 2401321002
 
 ## Introduction to Distributed applications
 <sup>This repository is part of the **Distributed applications** for part time students of Software Engineering at Plovdiv University.</sup>\
