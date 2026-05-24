@@ -1,3 +1,6 @@
+#Мюмюн Муса Муса
+##Факултетен номер: 2401321002
+
 ## Introduction to Distributed applications
 <sup>This repository is part of the **Distributed applications** for part time students of Software Engineering at Plovdiv University.</sup>\
 This course is designed to provide an overview of the principles and practices involved in building distributed applications. It emphasizes the importance of creating robust distributed applications that align with program specifications for software projects.
