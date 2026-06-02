@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ресторант - Food Delivery</title>
+    <link rel="stylesheet" href="css/food.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+</head>
+<body>
+
+    <header>
+        <a href="index.html" class="logo"><i class="fas fa-utensils"></i> FOOD <span>DELIVERY</span></a>
+        <nav class="navbar">
+            <a href="index.html">Ресторанти</a>
+            <a href="orders.html" id="nav-orders" style="display:none;">Поръчки</a>
+            <a href="admin.html" id="nav-admin" style="display:none;">Управление</a>
+        </nav>
+        <div style="display:flex;align-items:center;gap:1.5rem;">
+            <a href="cart.html" id="cart-btn" class="cart-icon" style="display:none;">
+                <i class="fas fa-shopping-cart"></i>
+                <span class="cart-count" id="cart-count" style="display:none;">0</span>
+            </a>
+            <a href="login.html" id="nav-login" class="nav-btn">Вход</a>
+            <div id="nav-user" style="display:none;" class="dropdown">
+                <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" style="font-size:1.4rem;font-weight:600;color:var(--text);display:flex;align-items:center;gap:.8rem;">
+                    <i class="fas fa-user-circle" style="font-size:2rem;color:var(--primary);"></i>
+                    <span id="nav-username"></span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="orders.html"><i class="fas fa-shopping-bag me-2"></i>Моите поръчки</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" onclick="logout()" style="cursor:pointer;"><i class="fas fa-sign-out-alt me-2"></i>Изход</a></li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <!-- RESTAURANT HERO -->
+    <div id="restaurant-hero" style="min-height:35rem;background:#333;display:flex;align-items:flex-end;position:relative;">
+        <div style="position:absolute;inset:0;background:linear-gradient(to top, rgba(0,0,0,.8), rgba(0,0,0,.2));"></div>
+        <div style="position:relative;z-index:1;padding:3rem 5%;width:100%;">
+            <a href="index.html" style="color:rgba(255,255,255,.7);font-size:1.3rem;display:inline-flex;align-items:center;gap:.5rem;margin-bottom:1rem;">
+                <i class="fas fa-arrow-left"></i> Назад към ресторанти
+            </a>
+            <h1 id="rest-name" style="color:white;font-size:3.5rem;font-weight:900;text-transform:uppercase;margin:0;"></h1>
+            <p id="rest-info" style="color:rgba(255,255,255,.75);font-size:1.4rem;margin-top:.5rem;"></p>
+        </div>
+    </div>
+
+    <!-- MENU -->
+    <section class="section">
+        <div class="section-head">
+            <span class="sub">наши специалитети</span>
+            <h2>Меню</h2>
+        </div>
+
+        <div class="search-bar">
+            <input type="text" id="search-name" placeholder="Търси по название..." />
+            <input type="text" id="search-category" placeholder="Търси по категория..." />
+            <button class="btn-search" onclick="loadMenu()"><i class="fas fa-search"></i> Търси</button>
+        </div>
+
+        <div id="alerts"></div>
+        <div id="menu-msg"></div>
+        <div class="cards-grid" id="menu-grid"></div>
+        <div class="pagination" id="pagination"></div>
+    </section>
+
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-col"><h3><i class="fas fa-utensils"></i> FOOD DELIVERY</h3><p>Поръчайте любимата си храна бързо и лесно.</p></div>
+            <div class="footer-col"><h3>Бързи връзки</h3><a href="index.html">Ресторанти</a><a href="orders.html">Поръчки</a></div>
+            <div class="footer-col"><h3>Контакти</h3><p><i class="fas fa-phone"></i> +359 888 000 000</p><p><i class="fas fa-envelope"></i> info@fooddelivery.bg</p></div>
+        </div>
+        <div class="footer-bottom">© 2024 <span>Food Delivery</span> — Всички права запазени</div>
+    </footer>
+
+    <script src="js/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const restaurantId = parseInt(params.get('id'));
+        let currentPage = 1;
+
+        if (!restaurantId) window.location.href = 'index.html';
+
+        if (isLoggedIn()) {
+            document.getElementById('nav-login').style.display = 'none';
+            document.getElementById('nav-user').style.display = 'block';
+            document.getElementById('nav-username').textContent = getUsername();
+            document.getElementById('nav-orders').style.display = 'block';
+            document.getElementById('cart-btn').style.display = 'block';
+            if (getRole() === 'Admin') document.getElementById('nav-admin').style.display = 'block';
+        }
+
+        updateCartBadge();
+
+        async function loadRestaurant() {
+            const result = await getRestaurant(restaurantId);
+            if (!result || !result.ok) { window.location.href = 'index.html'; return; }
+            const r = result.data;
+            document.title = r.name + ' - Food Delivery';
+            if (r.imagePath) {
+                document.getElementById('restaurant-hero').style.backgroundImage = `url('https://localhost:7001${r.imagePath}')`;
+                document.getElementById('restaurant-hero').style.backgroundSize = 'cover';
+                document.getElementById('restaurant-hero').style.backgroundPosition = 'center';
+            }
+            document.getElementById('rest-name').textContent = r.name;
+            document.getElementById('rest-info').innerHTML = `
+                <i class="fas fa-map-marker-alt me-2"></i>${r.address}
+                <span class="mx-3">|</span>
+                <i class="fas fa-phone me-2"></i>${r.phoneNumber}
+                ${r.rating > 0 ? `<span class="mx-3">|</span><i class="fas fa-star me-1" style="color:#ffc107;"></i>${r.rating.toFixed(1)}` : ''}
+            `;
+        }
+
+        async function loadMenu(page = 1) {
+            currentPage = page;
+            const search = document.getElementById('search-name').value;
+            const search2 = document.getElementById('search-category').value;
+            document.getElementById('menu-msg').innerHTML = '<p style="text-align:center;font-size:1.4rem;color:var(--text-muted);">Зареждане...</p>';
+            const result = await getMenuItems(restaurantId, page, search, search2);
+            if (!result || !result.ok) {
+                document.getElementById('menu-msg').innerHTML = '<p style="text-align:center;color:red;font-size:1.4rem;">Грешка при зареждане.</p>';
+                return;
+            }
+            const { items, totalPages } = result.data;
+            document.getElementById('menu-msg').innerHTML = '';
+            if (!items || items.length === 0) {
+                document.getElementById('menu-grid').innerHTML = '<p style="text-align:center;font-size:1.4rem;color:var(--text-muted);grid-column:1/-1;">Няма намерени артикули.</p>';
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+            document.getElementById('menu-grid').innerHTML = items.map(m => `
+                <div class="card">
+                    ${m.imagePath ? `<img src="https://localhost:7001${m.imagePath}" alt="${m.name}" class="card-img" />` : '<div class="card-placeholder">🍔</div>'}
+                    <span class="card-badge">€${m.price.toFixed(2)}</span>
+                    <div class="card-body">
+                        <div class="card-title">${m.name}</div>
+                        ${m.description ? `<div class="card-text">${m.description}</div>` : ''}
+                        <div class="card-text"><i class="fas fa-tag"></i> ${m.category}</div>
+                        ${m.weight > 0 ? `<div class="card-text"><i class="fas fa-weight"></i> ${m.weight}г</div>` : ''}
+                        ${!m.isAvailable ? '<div style="color:#dc3545;font-size:1.2rem;font-weight:600;">Неналичен</div>' : ''}
+                    </div>
+                    <div class="card-footer">
+                        ${m.isAvailable && isLoggedIn() && getRole() === 'Customer' ? `
+                        <button class="btn-card" onclick="handleAddToCart(${m.id},'${m.name.replace(/'/g, "\\'")}',${m.price})">
+                            <i class="fas fa-cart-plus me-2"></i>Добави
+                        </button>` : m.isAvailable && !isLoggedIn() ? `
+                        <a href="login.html" class="btn-card"><i class="fas fa-sign-in-alt me-2"></i>Влез за поръчка</a>` : `
+                        <div class="btn-card" style="opacity:.5;cursor:default;">${m.isAvailable ? 'Добави' : 'Неналичен'}</div>`}
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('pagination').innerHTML = Array.from({ length: totalPages }, (_, i) => i + 1)
+                .map(i => `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadMenu(${i})">${i}</button>`).join('');
+        }
+
+        function handleAddToCart(id, name, price) {
+            const added = addToCart({ id, name, price }, restaurantId);
+            if (added) {
+                showAlert(`<i class="fas fa-check me-2"></i>${name} добавен в количката!`);
+                updateCartBadge();
+            }
+        }
+
+        loadRestaurant();
+        loadMenu();
+    </script>
+</body>
+</html>

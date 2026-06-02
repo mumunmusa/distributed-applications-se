@@ -1,0 +1,254 @@
+﻿<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Количка - Food Delivery</title>
+    <link rel="stylesheet" href="css/food.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+</head>
+<body>
+
+    <header>
+        <a href="index.html" class="logo"><i class="fas fa-utensils"></i> FOOD <span>DELIVERY</span></a>
+        <nav class="navbar">
+            <a href="index.html">Ресторанти</a>
+            <a href="orders.html">Поръчки</a>
+        </nav>
+        <div style="display:flex;align-items:center;gap:1.5rem;">
+            <a href="cart.html" class="cart-icon">
+                <i class="fas fa-shopping-cart"></i>
+                <span class="cart-count" id="cart-count" style="display:none;">0</span>
+            </a>
+            <div class="dropdown">
+                <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" style="font-size:1.4rem;font-weight:600;color:var(--text);display:flex;align-items:center;gap:.8rem;">
+                    <i class="fas fa-user-circle" style="font-size:2rem;color:var(--primary);"></i>
+                    <span id="nav-username"></span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="orders.html"><i class="fas fa-shopping-bag me-2"></i>Моите поръчки</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" onclick="logout()" style="cursor:pointer;"><i class="fas fa-sign-out-alt me-2"></i>Изход</a></li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <section class="section">
+        <div class="section-head">
+            <span class="sub">вашата</span>
+            <h2>Количка</h2>
+        </div>
+
+        <div id="alerts"></div>
+
+        <!-- EMPTY STATE -->
+        <div id="cart-empty" style="display:none;max-width:50rem;margin:0 auto;text-align:center;padding:5rem 2rem;background:white;border-radius:1.2rem;box-shadow:var(--shadow);">
+            <i class="fas fa-shopping-cart" style="font-size:6rem;color:var(--border);display:block;margin-bottom:2rem;"></i>
+            <h3 style="font-size:2rem;font-weight:700;color:var(--text-muted);margin-bottom:1rem;">Количката е празна</h3>
+            <p style="font-size:1.4rem;color:var(--text-muted);margin-bottom:2rem;">Добавете артикули от някой ресторант</p>
+            <a href="index.html" class="btn-primary" style="display:inline-block;">Разгледай ресторанти</a>
+        </div>
+
+        <!-- CART WITH ITEMS -->
+        <div id="cart-full" style="display:none;">
+            <div style="display:grid;grid-template-columns:1fr 36rem;gap:3rem;align-items:start;">
+
+                <!-- LEFT: Items -->
+                <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;padding-bottom:1rem;border-bottom:2px solid var(--border);">
+                        <h3 style="font-size:1.8rem;font-weight:700;margin:0;" id="restaurant-name-title"></h3>
+                        <button onclick="clearCartConfirm()" style="background:none;border:none;color:#dc3545;font-size:1.3rem;cursor:pointer;font-family:inherit;">
+                            <i class="fas fa-trash me-1"></i>Изчисти
+                        </button>
+                    </div>
+                    <div id="cart-items-container"></div>
+                </div>
+
+                <!-- RIGHT: Summary -->
+                <div style="position:sticky;top:10rem;">
+                    <div style="background:white;border:1px solid var(--border);border-radius:1.2rem;padding:2.5rem;box-shadow:var(--shadow);">
+                        <h3 style="font-size:1.8rem;font-weight:800;margin-bottom:2rem;color:var(--text);">Обобщение</h3>
+
+                        <div id="summary-items" style="margin-bottom:2rem;"></div>
+
+                        <div style="border-top:2px solid var(--border);padding-top:1.5rem;margin-bottom:2rem;">
+                            <div style="display:flex;justify-content:space-between;font-size:1.6rem;font-weight:800;color:var(--primary);">
+                                <span>Общо:</span>
+                                <span id="total-price">€0.00</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-map-marker-alt me-2" style="color:var(--primary);"></i>Адрес за доставка *</label>
+                            <input type="text" id="delivery-address" placeholder="ул. Примерна 1, София" maxlength="300" />
+                            <div class="error" id="address-error">Адресът е задължителен</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-phone me-2" style="color:var(--primary);"></i>Телефон за контакт *</label>
+                            <input type="text" id="phone-number" placeholder="0888123456" maxlength="20" />
+                            <div class="error" id="phone-error">Телефонният номер е задължителен</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-sticky-note me-2" style="color:var(--primary);"></i>Бележки <span style="color:var(--text-muted);font-weight:400;">(по желание)</span></label>
+                            <textarea id="order-notes" placeholder="Без лук, моля..." maxlength="500" style="height:8rem;resize:none;"></textarea>
+                        </div>
+
+                        <button onclick="placeOrder()" class="btn-submit" id="order-btn">
+                            <i class="fas fa-check me-2"></i>Поръчай
+                        </button>
+
+                        <a href="index.html" style="display:block;text-align:center;margin-top:1.5rem;font-size:1.3rem;color:var(--text-muted);">
+                            <i class="fas fa-arrow-left me-1"></i>Продължи пазаруването
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-col"><h3><i class="fas fa-utensils"></i> FOOD DELIVERY</h3><p>Поръчайте любимата си храна бързо и лесно.</p></div>
+            <div class="footer-col"><h3>Бързи връзки</h3><a href="index.html">Ресторанти</a><a href="orders.html">Поръчки</a></div>
+            <div class="footer-col"><h3>Контакти</h3><p><i class="fas fa-phone"></i> +359 888 000 000</p><p><i class="fas fa-envelope"></i> info@fooddelivery.bg</p></div>
+        </div>
+        <div class="footer-bottom">© 2024 <span>Food Delivery</span> — Всички права запазени</div>
+    </footer>
+
+    <script src="js/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        if (!requireAuth()) { }
+
+        document.getElementById('nav-username').textContent = getUsername();
+        updateCartBadge();
+
+        // Зареди запазения телефон на потребителя
+        const savedPhone = localStorage.getItem('userPhone');
+        if (savedPhone) document.getElementById('phone-number') && (document.getElementById('phone-number').value = savedPhone);
+
+        async function renderPage() {
+            const cart = getCart();
+
+            if (cart.items.length === 0) {
+                document.getElementById('cart-empty').style.display = 'block';
+                document.getElementById('cart-full').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('cart-empty').style.display = 'none';
+            document.getElementById('cart-full').style.display = 'block';
+
+            if (cart.restaurantId) {
+                const rResult = await getRestaurant(cart.restaurantId);
+                if (rResult && rResult.ok) {
+                    document.getElementById('restaurant-name-title').textContent = rResult.data.name;
+                }
+            }
+
+            document.getElementById('cart-items-container').innerHTML = cart.items.map(item => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:1.5rem 0;border-bottom:1px solid var(--border);">
+                    <div>
+                        <div style="font-size:1.5rem;font-weight:700;color:var(--text);">${item.name}</div>
+                        <div style="font-size:1.3rem;color:var(--text-muted);">€${item.price.toFixed(2)} / бр.</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:1rem;">
+                        <button onclick="decrease(${item.id})" style="width:3.2rem;height:3.2rem;border-radius:50%;border:2px solid var(--border);background:white;font-size:1.4rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <span style="font-size:1.6rem;font-weight:700;min-width:2rem;text-align:center;">${item.qty}</span>
+                        <button onclick="increase(${item.id},'${item.name.replace(/'/g, "\\'")}',${item.price})" style="width:3.2rem;height:3.2rem;border-radius:50%;border:2px solid var(--primary);background:var(--primary);color:white;font-size:1.4rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <div style="font-size:1.5rem;font-weight:700;color:var(--primary);min-width:8rem;text-align:right;">€${(item.price * item.qty).toFixed(2)}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('summary-items').innerHTML = cart.items.map(item => `
+                <div style="display:flex;justify-content:space-between;font-size:1.3rem;margin-bottom:.8rem;">
+                    <span style="color:var(--text-muted);">${item.name} x${item.qty}</span>
+                    <span style="font-weight:600;">€${(item.price * item.qty).toFixed(2)}</span>
+                </div>
+            `).join('');
+
+            document.getElementById('total-price').textContent = '€' + getCartTotal().toFixed(2);
+        }
+
+        function decrease(id) { removeFromCart(id); renderPage(); }
+
+        function increase(id, name, price) {
+            const cart = getCart();
+            addToCart({ id, name, price }, cart.restaurantId);
+            renderPage();
+        }
+
+        function clearCartConfirm() {
+            if (confirm('Изчистване на количката?')) { clearCart(); renderPage(); }
+        }
+
+        async function placeOrder() {
+            const address = document.getElementById('delivery-address').value.trim();
+            const phone = document.getElementById('phone-number').value.trim();
+            const notes = document.getElementById('order-notes').value.trim();
+            const cart = getCart();
+
+            let valid = true;
+
+            if (!address) {
+                document.getElementById('address-error').style.display = 'block';
+                document.getElementById('delivery-address').focus();
+                valid = false;
+            } else {
+                document.getElementById('address-error').style.display = 'none';
+            }
+
+            if (!phone) {
+                document.getElementById('phone-error').style.display = 'block';
+                if (valid) document.getElementById('phone-number').focus();
+                valid = false;
+            } else {
+                document.getElementById('phone-error').style.display = 'none';
+            }
+
+            if (!valid) return;
+            if (cart.items.length === 0) { showAlert('Количката е празна!', 'danger'); return; }
+
+            // Запази телефона за следващ път
+            localStorage.setItem('userPhone', phone);
+
+            const btn = document.getElementById('order-btn');
+            btn.textContent = 'Изпращане...';
+            btn.disabled = true;
+
+            const dto = {
+                deliveryAddress: address,
+                phoneNumber: phone,
+                notes: notes || null,
+                restaurantId: cart.restaurantId,
+                items: cart.items.map(i => ({ menuItemId: i.id, quantity: i.qty }))
+            };
+
+            const result = await createOrder(dto);
+
+            if (result && result.ok) {
+                clearCart();
+                showAlert('<i class="fas fa-check me-2"></i>Поръчката е изпратена успешно!');
+                setTimeout(() => window.location.href = 'orders.html', 2000);
+            } else {
+                showAlert('Грешка при поръчката. Опитайте отново.', 'danger');
+                btn.textContent = 'Поръчай';
+                btn.disabled = false;
+            }
+        }
+
+        renderPage();
+    </script>
+</body>
+</html>

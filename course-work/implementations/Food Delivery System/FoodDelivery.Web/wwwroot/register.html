@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Регистрация - Food Delivery</title>
+    <link rel="stylesheet" href="css/food.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+</head>
+<body>
+<header>
+    <a href="index.html" class="logo"><i class="fas fa-utensils"></i> FOOD <span>DELIVERY</span></a>
+    <nav class="navbar"><a href="index.html">Ресторанти</a></nav>
+    <div><a href="login.html" class="nav-btn">Вход</a></div>
+</header>
+
+<section style="min-height:85vh;display:flex;align-items:center;justify-content:center;background:var(--bg-light);padding:3rem 2rem;">
+    <div style="width:100%;max-width:52rem;">
+        <div id="alerts"></div>
+        <div class="form-card">
+            <div class="form-head">
+                <i class="fas fa-user-plus"></i>
+                <h2>Регистрация</h2>
+                <p>Създайте вашия акаунт безплатно</p>
+            </div>
+            <form id="register-form">
+                <div class="form-group">
+                    <label>Потребителско име *</label>
+                    <input type="text" id="username" required maxlength="50" placeholder="ivan_petrov" />
+                    <div class="error" id="username-error"></div>
+                </div>
+                <div class="form-group">
+                    <label>Имейл *</label>
+                    <input type="email" id="email" required maxlength="100" placeholder="example@email.com" />
+                    <div class="error" id="email-error"></div>
+                </div>
+                <div class="form-group">
+                    <label>Парола * <span style="color:var(--text-muted);font-weight:400;">(минимум 6 символа)</span></label>
+                    <input type="password" id="password" required minlength="6" placeholder="••••••" />
+                    <div class="error" id="password-error"></div>
+                </div>
+                <div class="form-group">
+                    <label>Адрес <span style="color:var(--text-muted);font-weight:400;">(по желание)</span></label>
+                    <input type="text" id="address" maxlength="200" placeholder="ул. Примерна 1, София" />
+                </div>
+                <div class="form-group">
+                    <label>Телефон <span style="color:var(--text-muted);font-weight:400;">(по желание)</span></label>
+                    <input type="text" id="phone" maxlength="20" placeholder="0888123456" />
+                </div>
+                <button type="submit" class="btn-submit" id="register-btn">Регистрация</button>
+            </form>
+            <hr style="margin:2rem 0;border-color:var(--border);" />
+            <p style="text-align:center;font-size:1.3rem;color:var(--text-muted);">
+                Вече имате акаунт? <a href="login.html" style="color:var(--primary);font-weight:700;">Влезте</a>
+            </p>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col"><h3><i class="fas fa-utensils"></i> FOOD DELIVERY</h3><p>Поръчайте любимата си храна бързо и лесно.</p></div>
+        <div class="footer-col"><h3>Бързи връзки</h3><a href="index.html">Ресторанти</a><a href="login.html">Вход</a></div>
+        <div class="footer-col"><h3>Контакти</h3><p><i class="fas fa-phone"></i> +359 888 000 000</p><p><i class="fas fa-envelope"></i> info@fooddelivery.bg</p></div>
+    </div>
+    <div class="footer-bottom">© 2024 <span>Food Delivery</span> — Всички права запазени</div>
+</footer>
+
+<script src="js/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/api.js"></script>
+<script>
+    if (isLoggedIn()) window.location.href = 'index.html';
+
+    document.getElementById('register-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const username = document.getElementById('username').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const address = document.getElementById('address').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const btn = document.getElementById('register-btn');
+        let valid = true;
+
+        if (!username || username.length > 50) { document.getElementById('username-error').textContent = 'Задължително (max 50 символа)'; document.getElementById('username-error').style.display = 'block'; valid = false; }
+        else document.getElementById('username-error').style.display = 'none';
+
+        if (!email || email.length > 100) { document.getElementById('email-error').textContent = 'Задължително (max 100 символа)'; document.getElementById('email-error').style.display = 'block'; valid = false; }
+        else document.getElementById('email-error').style.display = 'none';
+
+        if (password.length < 6) { document.getElementById('password-error').textContent = 'Минимум 6 символа'; document.getElementById('password-error').style.display = 'block'; valid = false; }
+        else document.getElementById('password-error').style.display = 'none';
+
+        if (!valid) return;
+
+        btn.textContent = 'Зареждане...';
+        btn.disabled = true;
+
+        const result = await apiRequest('POST', 'api/auth/register', { username, email, password, address: address || null, phoneNumber: phone || null });
+
+        if (result && result.ok) {
+            localStorage.setItem('token', result.data.token);
+            localStorage.setItem('role', result.data.role);
+            localStorage.setItem('username', result.data.username);
+            localStorage.setItem('userId', result.data.userId);
+            window.location.href = 'index.html';
+        } else {
+            showAlert(result?.data?.detail || 'Регистрацията не успя.', 'danger');
+            btn.textContent = 'Регистрация';
+            btn.disabled = false;
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Panel - Food Delivery</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.9.0/css/all.min.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="admin/css/-variables.css" />
+    <link rel="stylesheet" href="admin/css/-global.css" />
+    <link rel="stylesheet" href="admin/css/dpanel.css" />
+    <style>
+        .badge-admin {
+            background: var(--first-color);
+            color: white;
+        }
+
+        .badge-owner {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .badge-driver {
+            background: #198754;
+            color: white;
+        }
+
+        .badge-customer {
+            background: #6c757d;
+            color: white;
+        }
+
+        .badge-pending {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .badge-confirmed {
+            background: #0dcaf0;
+            color: #000;
+        }
+
+        .badge-preparing {
+            background: #6f42c1;
+            color: white;
+        }
+
+        .badge-delivered {
+            background: #198754;
+            color: white;
+        }
+
+        .badge-cancelled {
+            background: #dc3545;
+            color: white;
+        }
+
+        .status-badge, .role-badge {
+            padding: .3rem .8rem;
+            border-radius: 2rem;
+            font-size: .75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .tab-section {
+            display: none;
+        }
+
+            .tab-section.active {
+                display: block;
+            }
+
+        .sidebar-item.active {
+            background-color: var(--first-color-alt) !important;
+        }
+
+        #alerts {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 9999;
+            width: 300px;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="dpanel-header position-fixed d-flex-center">
+        <nav class="dpanel-navbars position-relative w-100 text-white" style="padding:0.5rem;">
+            <div class="d-flex-center dpanel-nav-left navbar navbar-expand-md">
+                <button class="btn txt-clr me-1" id="menu-toggle"><i class="fas fa-arrow-left"></i></button>
+            </div>
+            <ul class="d-flex-center dpanel-nav-right">
+                <li class="nav-item">
+                    <span class="nav-link txt-clr" style="font-weight:700;">
+                        <i class="fas fa-user-circle me-2"></i>
+                        <span id="admin-name">Admin</span>
+                    </span>
+                </li>
+                <li class="nav-item">
+                    <a onclick="doLogout()" class="nav-link txt-clr" style="cursor:pointer;"><i class="fas fa-sign-out-alt"></i></a>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <aside class="dpanel-sidebar">
+        <div class="navbar-brand txt-clr" style="font-weight:800;font-size:1.2rem;">
+            <i class="fas fa-utensils me-2"></i>FOOD DELIVERY
+        </div>
+        <ul class="mt-4">
+            <li class="sidebar-item active" onclick="showTab('dashboard', this)">
+                <a href="#"><i class="fas fa-tachometer-alt"></i></a>
+                <span>Dashboard</span>
+            </li>
+            <li class="sidebar-item" onclick="showTab('users', this)">
+                <a href="#"><i class="fas fa-users"></i></a>
+                <span>Потребители</span>
+            </li>
+            <li class="sidebar-item" onclick="showTab('restaurants', this)">
+                <a href="#"><i class="fas fa-store"></i></a>
+                <span>Ресторанти</span>
+            </li>
+            <li class="sidebar-item" onclick="showTab('menuitems', this)">
+                <a href="#"><i class="fas fa-utensils"></i></a>
+                <span>Менюта</span>
+            </li>
+            <li class="sidebar-item" onclick="showTab('orders', this)">
+                <a href="#"><i class="fas fa-shopping-bag"></i></a>
+                <span>Поръчки</span>
+            </li>
+        </ul>
+    </aside>
+
+    <main class="dpanel-content mt-5">
+        <div id="alerts"></div>
+
+        <!-- DASHBOARD -->
+        <div class="tab-section active" id="tab-dashboard">
+            <div class="content-header mb-4">
+                <h1 class="dpanel-title">Dashboard</h1>
+                <h6 class="dpanel-subtitle">Преглед на системата</h6>
+            </div>
+            <div class="card-container container">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <div class="card shadow text-center p-3">
+                            <i class="fas fa-users fa-2x mb-2" style="color:var(--first-color)"></i>
+                            <h3 class="dpanel-text" id="stat-users">-</h3>
+                            <p>Потребители</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card shadow text-center p-3">
+                            <i class="fas fa-store fa-2x mb-2" style="color:var(--first-color)"></i>
+                            <h3 class="dpanel-text" id="stat-restaurants">-</h3>
+                            <p>Ресторанти</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card shadow text-center p-3">
+                            <i class="fas fa-utensils fa-2x mb-2" style="color:var(--first-color)"></i>
+                            <h3 class="dpanel-text" id="stat-menuitems">-</h3>
+                            <p>Артикули</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card shadow text-center p-3">
+                            <i class="fas fa-shopping-bag fa-2x mb-2" style="color:var(--first-color)"></i>
+                            <h3 class="dpanel-text" id="stat-orders">-</h3>
+                            <p>Поръчки</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="container-fluid mt-4">
+                <div class="card shadow mb-4">
+                    <div class="card-header d-flex justify-content-between py-3">
+                        <h6 class="m-0 font-weight-bold dpanel-text">Последни поръчки</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" width="100%">
+                                <thead>
+                                    <tr><th>ID</th><th>Клиент</th><th>Ресторант</th><th>Сума</th><th>Статус</th><th>Дата</th></tr>
+                                </thead>
+                                <tbody id="recent-orders-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- USERS -->
+        <div class="tab-section" id="tab-users">
+            <div class="content-header mb-4">
+                <h1 class="dpanel-title">Потребители</h1>
+            </div>
+            <div class="container-fluid">
+                <div class="card shadow mb-4">
+                    <div class="card-header d-flex justify-content-between py-3 align-items-center">
+                        <h6 class="m-0 dpanel-text">Всички потребители</h6>
+                        <div class="d-flex gap-2">
+                            <input type="text" id="user-search" placeholder="Търси по username..." class="form-control form-control-sm" style="width:200px;" />
+                            <select id="user-role-filter" class="form-select form-select-sm" style="width:180px;">
+                                <option value="">Всички роли</option>
+                                <option value="Admin">Admin</option>
+                                <option value="RestaurantOwner">RestaurantOwner</option>
+                                <option value="DeliveryDriver">DeliveryDriver</option>
+                                <option value="Customer">Customer</option>
+                            </select>
+                            <button class="btn dpanel-btn btn-sm" onclick="loadUsers()"><i class="fas fa-search"></i></button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Роля</th><th>Активен</th><th>Действия</th></tr></thead>
+                                <tbody id="users-body"></tbody>
+                            </table>
+                        </div>
+                        <div id="users-pagination" class="d-flex justify-content-center mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RESTAURANTS -->
+        <div class="tab-section" id="tab-restaurants">
+            <div class="content-header mb-4">
+                <h1 class="dpanel-title">Ресторанти</h1>
+            </div>
+            <div class="container-fluid">
+                <div class="card shadow mb-4">
+                    <div class="card-header d-flex justify-content-between py-3 align-items-center">
+                        <h6 class="m-0 dpanel-text">Всички ресторанти</h6>
+                        <div class="d-flex gap-2">
+                            <input type="text" id="rest-search" placeholder="Търси по име..." class="form-control form-control-sm" style="width:200px;" />
+                            <button class="btn dpanel-btn btn-sm" onclick="loadRestaurants()"><i class="fas fa-search"></i></button>
+                            <button class="btn dpanel-btn btn-sm" onclick="openAddRestaurant()"><i class="fas fa-plus"></i> Добави</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead><tr><th>ID</th><th>Снимка</th><th>Ime</th><th>Адрес</th><th>Телефон</th><th>Рейтинг</th><th>Собственик</th><th>Активен</th><th>Действия</th></tr></thead>
+                                <tbody id="restaurants-body"></tbody>
+                            </table>
+                        </div>
+                        <div id="restaurants-pagination" class="d-flex justify-content-center mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MENU ITEMS -->
+        <div class="tab-section" id="tab-menuitems">
+            <div class="content-header mb-4">
+                <h1 class="dpanel-title">Менюта</h1>
+            </div>
+            <div class="container-fluid">
+                <div class="card shadow mb-4">
+                    <div class="card-header d-flex justify-content-between py-3 align-items-center">
+                        <h6 class="m-0 dpanel-text">Всички артикули</h6>
+                        <div class="d-flex gap-2">
+                            <input type="text" id="menu-search" placeholder="Търси по ime..." class="form-control form-control-sm" style="width:200px;" />
+                            <button class="btn dpanel-btn btn-sm" onclick="loadMenuItems()"><i class="fas fa-search"></i></button>
+                            <button class="btn dpanel-btn btn-sm" onclick="openAddMenuItem()"><i class="fas fa-plus"></i> Добави</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead><tr><th>ID</th><th>Снимка</th><th>Название</th><th>Ресторант</th><th>Категория</th><th>Цена</th><th>Наличен</th><th>Действия</th></tr></thead>
+                                <tbody id="menuitems-body"></tbody>
+                            </table>
+                        </div>
+                        <div id="menuitems-pagination" class="d-flex justify-content-center mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ORDERS -->
+        <div class="tab-section" id="tab-orders">
+            <div class="content-header mb-4">
+                <h1 class="dpanel-title">Поръчки</h1>
+            </div>
+            <div class="container-fluid">
+                <div class="card shadow mb-4">
+                    <div class="card-header d-flex justify-content-between py-3 align-items-center">
+                        <h6 class="m-0 dpanel-text">Всички поръчки</h6>
+                        <div class="d-flex gap-2">
+                            <select id="order-status-filter" class="form-select form-select-sm" style="width:160px;">
+                                <option value="">Всички статуси</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Confirmed">Confirmed</option>
+                                <option value="Preparing">Preparing</option>
+                                <option value="Delivered">Delivered</option>
+                                <option value="Cancelled">Cancelled</option>
+                            </select>
+                            <button class="btn dpanel-btn btn-sm" onclick="loadOrders()"><i class="fas fa-search"></i></button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead><tr><th>ID</th><th>Клиент</th><th>Ресторант</th><th>Сума</th><th>Статус</th><th>Дата</th><th>Действия</th></tr></thead>
+                                <tbody id="orders-body"></tbody>
+                            </table>
+                        </div>
+                        <div id="orders-pagination" class="d-flex justify-content-center mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL: Edit User -->
+    <div class="modal fade" id="editUserModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background:var(--first-color);color:white;">
+                    <h5 class="modal-title">Редактирай потребител</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="edit-user-id" />
+                    <div class="mb-3">
+                        <label class="form-label">Потребителско име</label>
+                        <input type="text" class="form-control" id="edit-username" maxlength="50" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Роля</label>
+                        <select class="form-select" id="edit-role">
+                            <option value="Customer">Customer</option>
+                            <option value="RestaurantOwner">RestaurantOwner</option>
+                            <option value="DeliveryDriver">DeliveryDriver</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Активен</label>
+                        <select class="form-select" id="edit-active">
+                            <option value="true">Да</option>
+                            <option value="false">Не</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Затвори</button>
+                    <button type="button" class="btn dpanel-btn" onclick="saveUser()">Запази</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Add/Edit Restaurant -->
+    <div class="modal fade" id="restaurantModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background:var(--first-color);color:white;">
+                    <h5 class="modal-title" id="restaurant-modal-title">Добави ресторант</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="rest-id" />
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Ime *</label>
+                            <input type="text" class="form-control" id="rest-name" maxlength="100" required />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Телефон *</label>
+                            <input type="text" class="form-control" id="rest-phone" maxlength="20" required />
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Адрес *</label>
+                            <input type="text" class="form-control" id="rest-address" maxlength="200" required />
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Описание</label>
+                            <textarea class="form-control" id="rest-description" maxlength="500" rows="3"></textarea>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Рейтинг</label>
+                            <input type="number" class="form-control" id="rest-rating" min="0" max="5" step="0.1" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Активен</label>
+                            <select class="form-select" id="rest-active">
+                                <option value="true">Да</option>
+                                <option value="false">Не</option>
+                            </select>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Собственик <span class="text-muted">(RestaurantOwner)</span></label>
+                            <select class="form-select" id="rest-owner">
+                                <option value="">Няма</option>
+                            </select>
+                            <small class="text-muted">Само потребители с роля RestaurantOwner</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Затвори</button>
+                    <button type="button" class="btn dpanel-btn" onclick="saveRestaurant()">Запази</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Add/Edit MenuItem -->
+    <div class="modal fade" id="menuItemModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background:var(--first-color);color:white;">
+                    <h5 class="modal-title" id="menuitem-modal-title">Добави артикул</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="menu-id" />
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Название *</label>
+                            <input type="text" class="form-control" id="menu-name" maxlength="100" required />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Категория *</label>
+                            <input type="text" class="form-control" id="menu-category" maxlength="50" required />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Цена *</label>
+                            <input type="number" class="form-control" id="menu-price" min="0.01" step="0.01" required />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Тегло (грамове)</label>
+                            <input type="number" class="form-control" id="menu-weight" min="0" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Ресторант *</label>
+                            <select class="form-select" id="menu-restaurant"></select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Наличен</label>
+                            <select class="form-select" id="menu-available">
+                                <option value="true">Да</option>
+                                <option value="false">Не</option>
+                            </select>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Описание</label>
+                            <textarea class="form-control" id="menu-description" maxlength="500" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Затвори</button>
+                    <button type="button" class="btn dpanel-btn" onclick="saveMenuItem()">Запази</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Update Order Status -->
+    <div class="modal fade" id="orderStatusModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background:var(--first-color);color:white;">
+                    <h5 class="modal-title">Смени статус на поръчка</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="order-id" />
+                    <div class="mb-3">
+                        <label class="form-label">Нов статус</label>
+                        <select class="form-select" id="order-new-status">
+                            <option value="Pending">Pending</option>
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="Preparing">Preparing</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Затвори</button>
+                    <button type="button" class="btn dpanel-btn" onclick="saveOrderStatus()">Запази</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="admin/js/dpanel.js"></script>
+    <script>
+        if (!isLoggedIn() || getRole() !== 'Admin') window.location.href = 'login.html';
+
+        document.getElementById('admin-name').textContent = getUsername();
+
+        document.getElementById('menu-toggle').addEventListener('click', function () {
+            document.querySelector('.dpanel-sidebar').classList.toggle('active');
+            document.querySelector('.dpanel-content').classList.toggle('active');
+            document.querySelector('.dpanel-header').classList.toggle('active');
+        });
+
+        function showTab(tab, el) {
+            document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            if (el) el.classList.add('active');
+            if (tab === 'dashboard') loadDashboard();
+            if (tab === 'users') loadUsers();
+            if (tab === 'restaurants') loadRestaurants();
+            if (tab === 'menuitems') loadMenuItems();
+            if (tab === 'orders') loadOrders();
+        }
+
+        function doLogout() { logout(); }
+
+        function showAdminAlert(msg, type = 'success') {
+            const div = document.createElement('div');
+            div.className = `alert alert-${type} alert-dismissible fade show`;
+            div.innerHTML = `${msg} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+            document.getElementById('alerts').appendChild(div);
+            setTimeout(() => div.remove(), 4000);
+        }
+
+        function statusBadgeHtml(status) {
+            const cls = { 'Pending': 'badge-pending', 'Confirmed': 'badge-confirmed', 'Preparing': 'badge-preparing', 'Delivered': 'badge-delivered', 'Cancelled': 'badge-cancelled' }[status] || 'bg-secondary';
+            return `<span class="status-badge ${cls}">${status}</span>`;
+        }
+
+        function roleBadgeHtml(role) {
+            const cls = { 'Admin': 'badge-admin', 'RestaurantOwner': 'badge-owner', 'DeliveryDriver': 'badge-driver', 'Customer': 'badge-customer' }[role] || 'bg-secondary';
+            return `<span class="role-badge ${cls}">${role}</span>`;
+        }
+
+        function paginationHtml(total, page, pageSize, fn, containerId) {
+            const totalPages = Math.ceil(total / pageSize);
+            let html = '<ul class="pagination">';
+            for (let i = 1; i <= totalPages; i++) {
+                html += `<li class="page-item ${i === page ? 'active' : ''}"><a class="page-link" onclick="${fn}(${i})" style="cursor:pointer;">${i}</a></li>`;
+            }
+            html += '</ul>';
+            document.getElementById(containerId).innerHTML = html;
+        }
+
+        // ── DASHBOARD ─────────────────────────────────
+        async function loadDashboard() {
+            const [users, restaurants, menuitems, orders] = await Promise.all([
+                getUsers(1, '', ''),
+                getRestaurants(1, '', '', '', 'asc'),
+                getMenuItems(null, 1, '', ''),
+                getOrders(1, '', '')
+            ]);
+            document.getElementById('stat-users').textContent = users?.data?.totalCount ?? 0;
+            document.getElementById('stat-restaurants').textContent = restaurants?.data?.totalCount ?? 0;
+            document.getElementById('stat-menuitems').textContent = menuitems?.data?.totalCount ?? 0;
+            document.getElementById('stat-orders').textContent = orders?.data?.totalCount ?? 0;
+
+            const recentOrders = orders?.data?.items ?? [];
+            document.getElementById('recent-orders-body').innerHTML = recentOrders.map(o => `
+                <tr>
+                    <td>#${o.id}</td><td>${o.username}</td><td>${o.restaurantName}</td>
+                    <td>${o.totalAmount.toFixed(2)} лв.</td>
+                    <td>${statusBadgeHtml(o.status)}</td>
+                    <td>${new Date(o.createdAt).toLocaleDateString('bg-BG')}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="6" class="text-center">Няма поръчки</td></tr>';
+        }
+
+        // ── USERS ─────────────────────────────────────
+        let usersPage = 1;
+        async function loadUsers(page = 1) {
+            usersPage = page;
+            const search = document.getElementById('user-search').value;
+            const role = document.getElementById('user-role-filter').value;
+            const result = await getUsers(page, search, role);
+            if (!result?.ok) return;
+            const { items, totalCount } = result.data;
+            document.getElementById('users-body').innerHTML = items.map(u => `
+                <tr>
+                    <td>${u.id}</td><td>${u.username}</td><td>${u.email}</td>
+                    <td>${roleBadgeHtml(u.role)}</td>
+                    <td>${u.isActive ? '<i class="fas fa-check text-success"></i>' : '<i class="fas fa-times text-danger"></i>'}</td>
+                    <td>
+                        <button class="btn btn-sm dpanel-btn" onclick="openEditUser(${u.id},'${u.username}','${u.role}',${u.isActive})"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-danger ms-1" onclick="deleteUserAdmin(${u.id})"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="6" class="text-center">Няма потребители</td></tr>';
+            paginationHtml(totalCount, page, 10, 'loadUsers', 'users-pagination');
+        }
+
+        function openEditUser(id, username, role, isActive) {
+            document.getElementById('edit-user-id').value = id;
+            document.getElementById('edit-username').value = username;
+            document.getElementById('edit-role').value = role;
+            document.getElementById('edit-active').value = isActive.toString();
+            new bootstrap.Modal(document.getElementById('editUserModal')).show();
+        }
+
+        async function saveUser() {
+            const id = document.getElementById('edit-user-id').value;
+            const dto = { username: document.getElementById('edit-username').value, role: document.getElementById('edit-role').value, isActive: document.getElementById('edit-active').value === 'true' };
+            const result = await updateUser(id, dto);
+            if (result) {
+                showAdminAlert('Потребителят е обновен!');
+                bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+                loadUsers(usersPage);
+            } else showAdminAlert('Грешка при обновяване.', 'danger');
+        }
+
+        async function deleteUserAdmin(id) {
+            if (!confirm('Изтриване на потребител?')) return;
+            const result = await deleteUser(id);
+            if (result) { showAdminAlert('Потребителят е изтрит!'); loadUsers(usersPage); }
+            else showAdminAlert('Грешка при изтриване.', 'danger');
+        }
+
+        // ── RESTAURANTS ───────────────────────────────
+        let restaurantsPage = 1;
+        async function loadRestaurants(page = 1) {
+            restaurantsPage = page;
+            const search = document.getElementById('rest-search').value;
+            const result = await getRestaurants(page, search, '', '', 'asc');
+            if (!result?.ok) return;
+            const { items, totalCount } = result.data;
+            document.getElementById('restaurants-body').innerHTML = items.map(r => `
+                <tr>
+                    <td>${r.id}</td>
+                    <td>${r.imagePath ? `<img src="https://localhost:7001${r.imagePath}" width="50" height="50" style="object-fit:cover;border-radius:4px;" />` : '🍽️'}</td>
+                    <td>${r.name}</td><td>${r.address}</td><td>${r.phoneNumber}</td>
+                    <td>${r.rating > 0 ? '⭐ ' + r.rating.toFixed(1) : '-'}</td>
+                    <td>${r.ownerName ? `<span class="role-badge badge-owner">${r.ownerName}</span>` : '<span class="text-muted">Няма</span>'}</td>
+                    <td>${r.isActive ? '<i class="fas fa-check text-success"></i>' : '<i class="fas fa-times text-danger"></i>'}</td>
+                    <td>
+                        <button class="btn btn-sm dpanel-btn" onclick='openEditRestaurant(${JSON.stringify(r).replace(/'/g, "&#39;")})'>
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger ms-1" onclick="deleteRestaurantAdmin(${r.id})"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="9" class="text-center">Няма ресторанти</td></tr>';
+            paginationHtml(totalCount, page, 10, 'loadRestaurants', 'restaurants-pagination');
+        }
+
+        async function loadOwners() {
+            const result = await getUsers(1, '', 'RestaurantOwner');
+            const owners = result?.data?.items ?? [];
+            return owners;
+        }
+
+        async function openAddRestaurant() {
+            document.getElementById('rest-id').value = '';
+            document.getElementById('rest-name').value = '';
+            document.getElementById('rest-phone').value = '';
+            document.getElementById('rest-address').value = '';
+            document.getElementById('rest-description').value = '';
+            document.getElementById('rest-rating').value = '';
+            document.getElementById('rest-active').value = 'true';
+            document.getElementById('restaurant-modal-title').textContent = 'Добави ресторант';
+
+            const owners = await loadOwners();
+            document.getElementById('rest-owner').innerHTML = '<option value="">Няма</option>' +
+                owners.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
+
+            new bootstrap.Modal(document.getElementById('restaurantModal')).show();
+        }
+
+        async function openEditRestaurant(r) {
+            document.getElementById('rest-id').value = r.id;
+            document.getElementById('rest-name').value = r.name;
+            document.getElementById('rest-phone').value = r.phoneNumber;
+            document.getElementById('rest-address').value = r.address;
+            document.getElementById('rest-description').value = r.description || '';
+            document.getElementById('rest-rating').value = r.rating;
+            document.getElementById('rest-active').value = r.isActive.toString();
+            document.getElementById('restaurant-modal-title').textContent = 'Редактирай ресторант';
+
+            const owners = await loadOwners();
+            document.getElementById('rest-owner').innerHTML = '<option value="">Няма</option>' +
+                owners.map(u => `<option value="${u.id}" ${u.id === r.ownerId ? 'selected' : ''}>${u.username}</option>`).join('');
+
+            new bootstrap.Modal(document.getElementById('restaurantModal')).show();
+        }
+
+        async function saveRestaurant() {
+            const id = document.getElementById('rest-id').value;
+            const ownerVal = document.getElementById('rest-owner').value;
+            const dto = {
+                name: document.getElementById('rest-name').value,
+                phoneNumber: document.getElementById('rest-phone').value,
+                address: document.getElementById('rest-address').value,
+                description: document.getElementById('rest-description').value || null,
+                rating: parseFloat(document.getElementById('rest-rating').value) || 0,
+                isActive: document.getElementById('rest-active').value === 'true',
+                ownerId: ownerVal ? parseInt(ownerVal) : null
+            };
+            let result;
+            if (id) result = await updateRestaurant(id, dto);
+            else result = await createRestaurant(dto);
+
+            if (result && (result === true || result.ok)) {
+                showAdminAlert(id ? 'Ресторантът е обновен!' : 'Ресторантът е добавен!');
+                bootstrap.Modal.getInstance(document.getElementById('restaurantModal')).hide();
+                loadRestaurants(restaurantsPage);
+            } else showAdminAlert('Грешка при запазване.', 'danger');
+        }
+
+        async function deleteRestaurantAdmin(id) {
+            if (!confirm('Изтриване на ресторант?')) return;
+            const result = await deleteRestaurant(id);
+            if (result) { showAdminAlert('Ресторантът е изтрит!'); loadRestaurants(restaurantsPage); }
+            else showAdminAlert('Грешка при изтриване.', 'danger');
+        }
+
+        // ── MENU ITEMS ────────────────────────────────
+        let menuItemsPage = 1;
+        async function loadMenuItems(page = 1) {
+            menuItemsPage = page;
+            const search = document.getElementById('menu-search').value;
+            const result = await getMenuItems(null, page, search, '');
+            if (!result?.ok) return;
+            const { items, totalCount } = result.data;
+            document.getElementById('menuitems-body').innerHTML = items.map(m => `
+                <tr>
+                    <td>${m.id}</td>
+                    <td>${m.imagePath ? `<img src="https://localhost:7001${m.imagePath}" width="50" height="50" style="object-fit:cover;border-radius:4px;" />` : '🍔'}</td>
+                    <td>${m.name}</td><td>${m.restaurantName}</td><td>${m.category}</td>
+                    <td>${m.price.toFixed(2)} лв.</td>
+                    <td>${m.isAvailable ? '<i class="fas fa-check text-success"></i>' : '<i class="fas fa-times text-danger"></i>'}</td>
+                    <td>
+                        <button class="btn btn-sm dpanel-btn" onclick='openEditMenuItem(${JSON.stringify(m).replace(/'/g, "&#39;")})'>
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger ms-1" onclick="deleteMenuItemAdmin(${m.id})"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="8" class="text-center">Няма артикули</td></tr>';
+            paginationHtml(totalCount, page, 10, 'loadMenuItems', 'menuitems-pagination');
+        }
+
+        async function openAddMenuItem() {
+            document.getElementById('menu-id').value = '';
+            document.getElementById('menu-name').value = '';
+            document.getElementById('menu-category').value = '';
+            document.getElementById('menu-price').value = '';
+            document.getElementById('menu-weight').value = '';
+            document.getElementById('menu-description').value = '';
+            document.getElementById('menu-available').value = 'true';
+            document.getElementById('menuitem-modal-title').textContent = 'Добави артикул';
+
+            const rResult = await getRestaurants(1, '', '', '', 'asc');
+            const restaurants = rResult?.data?.items ?? [];
+            document.getElementById('menu-restaurant').innerHTML = restaurants.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+
+            new bootstrap.Modal(document.getElementById('menuItemModal')).show();
+        }
+
+        async function openEditMenuItem(m) {
+            document.getElementById('menu-id').value = m.id;
+            document.getElementById('menu-name').value = m.name;
+            document.getElementById('menu-category').value = m.category;
+            document.getElementById('menu-price').value = m.price;
+            document.getElementById('menu-weight').value = m.weight;
+            document.getElementById('menu-description').value = m.description || '';
+            document.getElementById('menu-available').value = m.isAvailable.toString();
+            document.getElementById('menuitem-modal-title').textContent = 'Редактирай артикул';
+
+            const rResult = await getRestaurants(1, '', '', '', 'asc');
+            const restaurants = rResult?.data?.items ?? [];
+            document.getElementById('menu-restaurant').innerHTML = restaurants.map(r =>
+                `<option value="${r.id}" ${r.id === m.restaurantId ? 'selected' : ''}>${r.name}</option>`
+            ).join('');
+
+            new bootstrap.Modal(document.getElementById('menuItemModal')).show();
+        }
+
+        async function saveMenuItem() {
+            const id = document.getElementById('menu-id').value;
+            const dto = {
+                name: document.getElementById('menu-name').value,
+                category: document.getElementById('menu-category').value,
+                price: parseFloat(document.getElementById('menu-price').value),
+                weight: parseFloat(document.getElementById('menu-weight').value) || 0,
+                description: document.getElementById('menu-description').value || null,
+                isAvailable: document.getElementById('menu-available').value === 'true',
+                restaurantId: parseInt(document.getElementById('menu-restaurant').value)
+            };
+            let result;
+            if (id) result = await updateMenuItem(id, dto);
+            else result = await createMenuItem(dto);
+
+            if (result && (result === true || result.ok)) {
+                showAdminAlert(id ? 'Артикулът е обновен!' : 'Артикулът е добавен!');
+                bootstrap.Modal.getInstance(document.getElementById('menuItemModal')).hide();
+                loadMenuItems(menuItemsPage);
+            } else showAdminAlert('Грешка при запазване.', 'danger');
+        }
+
+        async function deleteMenuItemAdmin(id) {
+            if (!confirm('Изтриване на артикул?')) return;
+            const result = await deleteMenuItem(id);
+            if (result) { showAdminAlert('Артикулът е изтрит!'); loadMenuItems(menuItemsPage); }
+            else showAdminAlert('Грешка при изтриване.', 'danger');
+        }
+
+        // ── ORDERS ────────────────────────────────────
+        let ordersPage = 1;
+        async function loadOrders(page = 1) {
+            ordersPage = page;
+            const status = document.getElementById('order-status-filter').value;
+            const result = await getOrders(page, status, '');
+            if (!result?.ok) return;
+            const { items, totalCount } = result.data;
+            document.getElementById('orders-body').innerHTML = items.map(o => `
+                <tr>
+                    <td>#${o.id}</td><td>${o.username}</td><td>${o.restaurantName}</td>
+                    <td>${o.totalAmount.toFixed(2)} лв.</td>
+                    <td>${statusBadgeHtml(o.status)}</td>
+                    <td>${new Date(o.createdAt).toLocaleDateString('bg-BG')}</td>
+                    <td>
+                        <button class="btn btn-sm dpanel-btn" onclick="openOrderStatus(${o.id},'${o.status}')">
+                            <i class="fas fa-exchange-alt"></i> Статус
+                        </button>
+                        <button class="btn btn-sm btn-danger ms-1" onclick="deleteOrderAdmin(${o.id})"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="7" class="text-center">Няма поръчки</td></tr>';
+            paginationHtml(totalCount, page, 10, 'loadOrders', 'orders-pagination');
+        }
+
+        function openOrderStatus(id, currentStatus) {
+            document.getElementById('order-id').value = id;
+            document.getElementById('order-new-status').value = currentStatus;
+            new bootstrap.Modal(document.getElementById('orderStatusModal')).show();
+        }
+
+        async function saveOrderStatus() {
+            const id = document.getElementById('order-id').value;
+            const status = document.getElementById('order-new-status').value;
+            const result = await updateOrderStatus(id, status);
+            if (result) {
+                showAdminAlert('Статусът е сменен!');
+                bootstrap.Modal.getInstance(document.getElementById('orderStatusModal')).hide();
+                loadOrders(ordersPage);
+            } else showAdminAlert('Грешка при смяна на статус.', 'danger');
+        }
+
+        async function deleteOrderAdmin(id) {
+            if (!confirm('Изтриване на поръчка?')) return;
+            const result = await deleteOrder(id);
+            if (result) { showAdminAlert('Поръчката е изтрита!'); loadOrders(ordersPage); }
+            else showAdminAlert('Грешка при изтриване.', 'danger');
+        }
+
+        loadDashboard();
+    </script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Моите поръчки - Food Delivery</title>
+    <link rel="stylesheet" href="css/food.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+</head>
+<body>
+
+    <header>
+        <a href="index.html" class="logo"><i class="fas fa-utensils"></i> FOOD <span>DELIVERY</span></a>
+        <nav class="navbar">
+            <a href="index.html">Ресторанти</a>
+            <a href="orders.html" class="active">Поръчки</a>
+        </nav>
+        <div style="display:flex;align-items:center;gap:1.5rem;">
+            <a href="cart.html" class="cart-icon">
+                <i class="fas fa-shopping-cart"></i>
+                <span class="cart-count" id="cart-count" style="display:none;">0</span>
+            </a>
+            <div class="dropdown">
+                <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" style="font-size:1.4rem;font-weight:600;color:var(--text);display:flex;align-items:center;gap:.8rem;">
+                    <i class="fas fa-user-circle" style="font-size:2rem;color:var(--primary);"></i>
+                    <span id="nav-username"></span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><span class="dropdown-item-text" style="color:var(--text-muted);font-size:1.2rem;">Customer</span></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" onclick="logout()" style="cursor:pointer;"><i class="fas fa-sign-out-alt me-2"></i>Изход</a></li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <section class="section">
+        <div class="section-head">
+            <span class="sub">история</span>
+            <h2>Моите поръчки</h2>
+        </div>
+        <div class="search-bar">
+            <select id="status-filter">
+                <option value="">Всички статуси</option>
+                <option value="Pending">Pending</option>
+                <option value="Confirmed">Confirmed</option>
+                <option value="Preparing">Preparing</option>
+                <option value="OutForDelivery">На път</option>
+                <option value="Delivered">Delivered</option>
+                <option value="Cancelled">Cancelled</option>
+            </select>
+            <input type="text" id="search-restaurant" placeholder="Търси по ресторант..." />
+            <button class="btn-search" onclick="loadOrders()"><i class="fas fa-search"></i> Търси</button>
+        </div>
+        <div id="alerts"></div>
+        <div id="orders-msg"></div>
+        <div id="orders-list"></div>
+        <div class="pagination" id="pagination"></div>
+    </section>
+
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-col"><h3><i class="fas fa-utensils"></i> FOOD DELIVERY</h3><p>Поръчайте любимата си храна бързо и лесно.</p></div>
+            <div class="footer-col"><h3>Бързи връзки</h3><a href="index.html">Ресторанти</a><a href="orders.html">Поръчки</a></div>
+            <div class="footer-col"><h3>Контакти</h3><p><i class="fas fa-phone"></i> +359 888 000 000</p><p><i class="fas fa-envelope"></i> info@fooddelivery.bg</p></div>
+        </div>
+        <div class="footer-bottom">© 2024 <span>Food Delivery</span> — Всички права запазени</div>
+    </footer>
+
+    <script src="js/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        if (!isLoggedIn() || getRole() !== 'Customer') window.location.href = 'login.html';
+        document.getElementById('nav-username').textContent = getUsername();
+        updateCartBadge();
+
+        let currentPage = 1;
+
+        function statusBadge(status) {
+            const map = { 'Pending': 'badge-pending', 'Confirmed': 'badge-confirmed', 'Preparing': 'badge-preparing', 'OutForDelivery': 'badge-outfordelivery', 'Delivered': 'badge-delivered', 'Cancelled': 'badge-cancelled' };
+            const labels = { 'Pending': 'Изчаква', 'Confirmed': 'Потвърдена', 'Preparing': 'Подготвя се', 'OutForDelivery': 'На път', 'Delivered': 'Доставена', 'Cancelled': 'Отменена' };
+            return `<span class="badge ${map[status] || 'bg-secondary'}">${labels[status] || status}</span>`;
+        }
+
+        async function loadOrders(page = 1) {
+            currentPage = page;
+            const search = document.getElementById('status-filter').value;
+            const search2 = document.getElementById('search-restaurant').value;
+            document.getElementById('orders-msg').innerHTML = '<p style="text-align:center;font-size:1.4rem;color:var(--text-muted);">Зареждане...</p>';
+            const result = await getOrders(page, search, search2);
+            if (!result?.ok) { document.getElementById('orders-msg').innerHTML = '<p style="text-align:center;color:red;font-size:1.4rem;">Грешка.</p>'; return; }
+            const { items, totalPages } = result.data;
+            document.getElementById('orders-msg').innerHTML = '';
+            if (!items || items.length === 0) {
+                document.getElementById('orders-list').innerHTML = `
+                    <div style="text-align:center;padding:5rem 2rem;">
+                        <i class="fas fa-shopping-bag" style="font-size:6rem;color:var(--border);display:block;margin-bottom:2rem;"></i>
+                        <h3 style="font-size:2rem;font-weight:700;color:var(--text-muted);">Нямате поръчки</h3>
+                        <a href="index.html" class="btn-primary" style="display:inline-block;margin-top:1.5rem;">Поръчай сега</a>
+                    </div>`;
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+            document.getElementById('orders-list').innerHTML = items.map(o => `
+                <div class="order-card">
+                    <div class="order-card-header">
+                        <div>
+                            <div class="order-card-id">Поръчка #${o.id}</div>
+                            <div style="font-size:1.2rem;color:var(--text-muted);">
+                                <i class="fas fa-store me-1"></i>${o.restaurantName}
+                                <span class="mx-2">|</span>
+                                <i class="fas fa-calendar me-1"></i>${new Date(o.createdAt).toLocaleDateString('bg-BG')}
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:1rem;">
+                            ${statusBadge(o.status)}
+                            <div style="font-size:1.6rem;font-weight:800;color:var(--primary);">€${o.totalAmount.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    <div style="font-size:1.2rem;color:var(--text-muted);margin-bottom:1rem;">
+                        <i class="fas fa-map-marker-alt me-1"></i>${o.deliveryAddress}
+                        ${o.phoneNumber ? `<span class="mx-2">|</span><i class="fas fa-phone me-1"></i>${o.phoneNumber}` : ''}
+                        ${o.notes ? `<br><i class="fas fa-sticky-note me-1"></i>${o.notes}` : ''}
+                    </div>
+                    <div class="order-items-list">
+                        ${o.items.map(item => `
+                            <div class="order-item-row">
+                                <span>${item.menuItemName} x${item.quantity}</span>
+                                <span>€${(item.unitPrice * item.quantity).toFixed(2)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="order-total"><span>Общо:</span><span>€${o.totalAmount.toFixed(2)}</span></div>
+                    ${o.status === 'Pending' ? `
+                    <div style="margin-top:1.5rem;">
+                        <button onclick="cancelOrder(${o.id})" style="padding:.7rem 1.5rem;border:2px solid #dc3545;color:#dc3545;background:transparent;border-radius:var(--radius);font-size:1.3rem;cursor:pointer;font-family:inherit;">
+                            <i class="fas fa-times me-1"></i>Отмени поръчката
+                        </button>
+                    </div>` : ''}
+                </div>
+            `).join('');
+            document.getElementById('pagination').innerHTML = Array.from({ length: totalPages }, (_, i) => i + 1)
+                .map(i => `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadOrders(${i})">${i}</button>`).join('');
+        }
+
+        async function cancelOrder(id) {
+            if (!confirm('Отмяна на поръчката?')) return;
+            const result = await updateOrderStatus(id, 'Cancelled');
+            if (result) { showAlert('Поръчката е отменена!'); loadOrders(currentPage); }
+            else showAlert('Грешка при отмяна.', 'danger');
+        }
+
+        loadOrders();
+    </script>
+</body>
+</html>

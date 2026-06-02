@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Доставки - Food Delivery</title>
+    <link rel="stylesheet" href="css/food.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+</head>
+<body>
+
+    <header>
+        <a href="driver-orders.html" class="logo"><i class="fas fa-motorcycle"></i> FOOD <span>DELIVERY</span></a>
+        <nav class="navbar">
+            <a href="driver-orders.html" class="active">Доставки</a>
+        </nav>
+        <div style="display:flex;align-items:center;gap:1.5rem;">
+            <div class="dropdown">
+                <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" style="font-size:1.4rem;font-weight:600;color:var(--text);display:flex;align-items:center;gap:.8rem;">
+                    <i class="fas fa-user-circle" style="font-size:2rem;color:var(--primary);"></i>
+                    <span id="nav-username"></span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><span class="dropdown-item-text" style="color:var(--text-muted);font-size:1.2rem;">DeliveryDriver</span></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" onclick="logout()" style="cursor:pointer;"><i class="fas fa-sign-out-alt me-2"></i>Изход</a></li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <section class="section">
+        <div class="section-head">
+            <span class="sub">активни</span>
+            <h2>Доставки</h2>
+        </div>
+        <div class="search-bar">
+            <select id="status-filter">
+                <option value="">Всички активни</option>
+                <option value="Confirmed">Потвърдена</option>
+                <option value="Preparing">Подготвя се</option>
+                <option value="OutForDelivery">На път</option>
+            </select>
+            <button class="btn-search" onclick="loadOrders()"><i class="fas fa-search"></i> Търси</button>
+            <button class="btn-search" onclick="loadOrders()" style="background:#198754;"><i class="fas fa-sync"></i> Обнови</button>
+        </div>
+        <div id="alerts"></div>
+        <div id="orders-msg"></div>
+        <div id="orders-list"></div>
+        <div class="pagination" id="pagination"></div>
+    </section>
+
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-col"><h3><i class="fas fa-motorcycle"></i> FOOD DELIVERY</h3><p>Доставете храната бързо и навреме.</p></div>
+            <div class="footer-col"><h3>Бързи връзки</h3><a href="driver-orders.html">Доставки</a></div>
+            <div class="footer-col"><h3>Контакти</h3><p><i class="fas fa-phone"></i> +359 888 000 000</p></div>
+        </div>
+        <div class="footer-bottom">© 2024 <span>Food Delivery</span> — Всички права запазени</div>
+    </footer>
+
+    <script src="js/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        if (!isLoggedIn() || getRole() !== 'DeliveryDriver') window.location.href = 'login.html';
+        document.getElementById('nav-username').textContent = getUsername();
+
+        let currentPage = 1;
+
+        function statusBadge(status) {
+            const map = { 'Confirmed': 'badge-confirmed', 'Preparing': 'badge-preparing', 'OutForDelivery': 'badge-outfordelivery' };
+            const labels = { 'Confirmed': 'Потвърдена', 'Preparing': 'Подготвя се', 'OutForDelivery': 'На път' };
+            return `<span class="badge ${map[status] || 'bg-secondary'}">${labels[status] || status}</span>`;
+        }
+
+        function actionButtons(o) {
+            if (o.status === 'Confirmed') {
+                return `<span style="font-size:1.3rem;color:var(--text-muted);"><i class="fas fa-clock me-1"></i>Изчаква потвърждение от ресторанта</span>`;
+            }
+            if (o.status === 'Preparing') {
+                return `<button onclick="changeDriverStatus(${o.id},'OutForDelivery')"
+                    style="padding:.8rem 2rem;background:#fd7e14;color:white;border:none;border-radius:var(--radius);font-size:1.3rem;font-weight:700;cursor:pointer;font-family:inherit;">
+                    <i class="fas fa-motorcycle me-2"></i>На път към клиента
+                </button>`;
+            }
+            if (o.status === 'OutForDelivery') {
+                return `<button onclick="changeDriverStatus(${o.id},'Delivered')"
+                    style="padding:.8rem 2rem;background:#198754;color:white;border:none;border-radius:var(--radius);font-size:1.3rem;font-weight:700;cursor:pointer;font-family:inherit;">
+                    <i class="fas fa-check-circle me-2"></i>Маркирай като доставена
+                </button>`;
+            }
+            return '';
+        }
+
+        async function loadOrders(page = 1) {
+            currentPage = page;
+            const search = document.getElementById('status-filter').value;
+            document.getElementById('orders-msg').innerHTML = '<p style="text-align:center;font-size:1.4rem;color:var(--text-muted);">Зареждане...</p>';
+            const result = await getOrders(page, search, '');
+            if (!result?.ok) { document.getElementById('orders-msg').innerHTML = '<p style="text-align:center;color:red;font-size:1.4rem;">Грешка.</p>'; return; }
+            const { items, totalPages } = result.data;
+            document.getElementById('orders-msg').innerHTML = '';
+
+            const activeItems = items.filter(o => ['Confirmed', 'Preparing', 'OutForDelivery'].includes(o.status));
+
+            if (!activeItems || activeItems.length === 0) {
+                document.getElementById('orders-list').innerHTML = `
+                    <div style="text-align:center;padding:5rem 2rem;">
+                        <i class="fas fa-motorcycle" style="font-size:6rem;color:var(--border);display:block;margin-bottom:2rem;"></i>
+                        <h3 style="font-size:2rem;font-weight:700;color:var(--text-muted);">Няма активни доставки</h3>
+                        <p style="font-size:1.4rem;color:var(--text-muted);">Изчакайте нови поръчки.</p>
+                    </div>`;
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+
+            document.getElementById('orders-list').innerHTML = activeItems.map(o => `
+                <div class="order-card">
+                    <div class="order-card-header">
+                        <div>
+                            <div class="order-card-id">Поръчка #${o.id}</div>
+                            <div style="font-size:1.2rem;color:var(--text-muted);">
+                                <i class="fas fa-store me-1"></i>${o.restaurantName}
+                                <span class="mx-2">|</span>
+                                <i class="fas fa-user me-1"></i>${o.username}
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:1rem;">
+                            ${statusBadge(o.status)}
+                            <div style="font-size:1.6rem;font-weight:800;color:var(--primary);">€${o.totalAmount.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    <div style="background:var(--bg-light);border-radius:var(--radius);padding:1.2rem;margin-bottom:1rem;">
+                        <div style="font-size:1.4rem;font-weight:600;margin-bottom:.5rem;">
+                            <i class="fas fa-map-marker-alt me-2" style="color:var(--primary);"></i>${o.deliveryAddress}
+                        </div>
+                        ${o.phoneNumber ? `<div style="font-size:1.3rem;color:var(--text-muted);"><i class="fas fa-phone me-2" style="color:var(--primary);"></i><strong>${o.phoneNumber}</strong></div>` : ''}
+                    </div>
+                    ${o.notes ? `<div style="font-size:1.2rem;color:var(--text-muted);margin-bottom:1rem;"><i class="fas fa-sticky-note me-1"></i>${o.notes}</div>` : ''}
+                    <div class="order-items-list">
+                        ${o.items.map(item => `
+                            <div class="order-item-row">
+                                <span>${item.menuItemName} x${item.quantity}</span>
+                                <span>€${(item.unitPrice * item.quantity).toFixed(2)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="order-total"><span>Общо:</span><span>€${o.totalAmount.toFixed(2)}</span></div>
+                    <div style="margin-top:1.5rem;">${actionButtons(o)}</div>
+                </div>
+            `).join('');
+
+            document.getElementById('pagination').innerHTML = Array.from({ length: totalPages }, (_, i) => i + 1)
+                .map(i => `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadOrders(${i})">${i}</button>`).join('');
+        }
+
+        async function changeDriverStatus(id, status) {
+            const messages = { 'OutForDelivery': 'На път към клиента?', 'Delivered': 'Маркиране като доставена?' };
+            const success = { 'OutForDelivery': 'Поръчката е на път!', 'Delivered': 'Поръчката е доставена!' };
+            if (!confirm(messages[status])) return;
+            const result = await updateOrderStatus(id, status);
+            if (result) { showAlert(`<i class="fas fa-check me-2"></i>${success[status]}`); loadOrders(currentPage); }
+            else showAlert('Грешка при смяна на статус.', 'danger');
+        }
+
+        loadOrders();
+    </script>
+</body>
+</html>
